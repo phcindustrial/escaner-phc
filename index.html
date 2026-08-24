@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Escáner Feria</title>
+    <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
+    <link rel="manifest" href="manifest.json">
+    <style>
+        body { font-family: sans-serif; text-align: center; padding: 20px; background-color: #f4f4f9; }
+        #reader { width: 100%; max-width: 500px; margin: 0 auto; border-radius: 8px; overflow: hidden; }
+        #status { margin-top: 20px; font-weight: bold; color: #333; padding: 10px; }
+        .success { background-color: #d4edda; color: #155724; border-radius: 5px; }
+    </style>
+</head>
+<body>
+
+    <h2>Escáner de Contactos</h2>
+    <div id="reader"></div>
+    <div id="status">Esperando escanear...</div>
+
+    <script>
+        // PEGA AQUÍ LA URL DE TU GOOGLE APPS SCRIPT
+        const GOOGLE_SCRIPT_URL = https://script.google.com/macros/s/AKfycbwRord0rj7LmmwGMA7Q9a19ObGELW4-d-E_WDmx-u4gnKxk2RddDMA8PnwLV_dV3Dnq/exec;
+
+        function onScanSuccess(decodedText, decodedResult) {
+            // Detenemos el escáner momentáneamente para no enviar duplicados
+            html5QrcodeScanner.pause();
+            document.getElementById('status').innerText = 'Guardando contacto...';
+
+            try {
+                // Asumimos que el QR es un JSON
+                const data = JSON.parse(decodedText);
+
+                fetch(GOOGLE_SCRIPT_URL, {
+                    method: 'POST',
+                    body: JSON.stringify(data),
+                    headers: { 'Content-Type': 'text/plain;charset=utf-8' }
+                })
+                .then(response => response.json())
+                .then(result => {
+                    const statusDiv = document.getElementById('status');
+                    statusDiv.innerText = `¡${data.nombre} guardado con éxito!`;
+                    statusDiv.className = 'success';
+                    
+                    // Reanudar el escáner después de 2 segundos
+                    setTimeout(() => {
+                        statusDiv.innerText = 'Listo para el siguiente...';
+                        statusDiv.className = '';
+                        html5QrcodeScanner.resume();
+                    }, 2000);
+                });
+
+            } catch (error) {
+                document.getElementById('status').innerText = 'Error: El formato del QR no es válido.';
+                setTimeout(() => html5QrcodeScanner.resume(), 3000);
+            }
+        }
+
+        function onScanFailure(error) {
+            // Se ejecuta constantemente si no detecta QR, lo ignoramos para no saturar
+        }
+
+        let html5QrcodeScanner = new Html5QrcodeScanner(
+            "reader",
+            { fps: 10, qrbox: {width: 250, height: 250} },
+            /* verbose= */ false);
+        html5QrcodeScanner.render(onScanSuccess, onScanFailure);
+    </script>
+
+</body>
+</html>

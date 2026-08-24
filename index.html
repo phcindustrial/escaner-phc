@@ -27,28 +27,24 @@
         const html5QrCode = new Html5Qrcode("reader");
 
         function onScanSuccess(decodedText, decodedResult) {
-            // Frenamos la cámara para procesar
             html5QrCode.stop().then(() => {
                 document.getElementById('status').innerText = "Guardando contacto...";
                 document.getElementById('status').className = "";
 
                 try {
-                    // 1. Desencriptamos el texto en formato Base64
+                    // Desencriptamos el texto
                     const textoDecodificado = decodeURIComponent(escape(window.atob(decodedText)));
-                    
-                    // 2. Cortamos el texto cada vez que aparece "#|#"
                     const partes = textoDecodificado.split('#|#');
                     
-                    // 3. Armamos el paquete de datos para Sheets
-                    // partes[0] es Nombre, partes[1] es Apellido, partes[2] Empresa, partes[5] Teléfono, partes[6] Mail
+                    // Armamos los datos con las posiciones correctas
+                    // Le sumamos "'" al teléfono para que Sheets no borre el símbolo +
                     const data = {
                         nombre: partes[0] + " " + partes[1],
                         empresa: partes[2],
-                        telefono: partes[5],
-                        email: partes[6]
+                        telefono: "'" + partes[4], 
+                        email: partes[5]
                     };
 
-                    // 4. Lo mandamos a la hoja de cálculo
                     fetch(GOOGLE_SCRIPT_URL, {
                         method: 'POST',
                         body: JSON.stringify(data),
@@ -59,7 +55,6 @@
                         document.getElementById('status').innerText = `¡${data.nombre} guardado con éxito!`;
                         document.getElementById('status').className = 'success';
                         
-                        // Espera 2.5 segundos y vuelve a encender la cámara
                         setTimeout(() => {
                             document.getElementById('status').className = '';
                             iniciarCamara();
@@ -98,15 +93,12 @@
                     qrbox: { width: 250, height: 250 }
                 },
                 onScanSuccess,
-                (errorMessage) => { 
-                    // Silenciamos los errores de lectura de cuadros vacíos
-                }
+                (errorMessage) => {}
             ).catch((err) => {
                 document.getElementById('status').innerText = "Error al abrir la cámara: " + err;
             });
         }
 
-        // Arrancamos todo
         iniciarCamara();
     </script>
 

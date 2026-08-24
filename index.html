@@ -36,13 +36,12 @@
                     const textoDecodificado = decodeURIComponent(escape(window.atob(decodedText)));
                     const partes = textoDecodificado.split('#|#');
                     
-                    // Armamos los datos con las posiciones correctas
-                    // Le sumamos "'" al teléfono para que Sheets no borre el símbolo +
+                    // Ahora sí, capturamos la posición 3 para el teléfono y la 4 para el email
                     const data = {
                         nombre: partes[0] + " " + partes[1],
                         empresa: partes[2],
-                        telefono: "'" + partes[4], 
-                        email: partes[5]
+                        telefono: "'" + partes[3], 
+                        email: partes[4]
                     };
 
                     fetch(GOOGLE_SCRIPT_URL, {
@@ -86,8 +85,9 @@
         function iniciarCamara() {
             document.getElementById('status').innerText = 'Buscando QR...';
             
+            // Usamos 'exact' para obligar a iOS a usar la cámara trasera
             html5QrCode.start(
-                { facingMode: "environment" }, 
+                { facingMode: { exact: "environment" } }, 
                 {
                     fps: 10,
                     qrbox: { width: 250, height: 250 }
@@ -95,7 +95,18 @@
                 onScanSuccess,
                 (errorMessage) => {}
             ).catch((err) => {
-                document.getElementById('status').innerText = "Error al abrir la cámara: " + err;
+                // Si falla el modo exacto (pasa en algunos Android), entra este plan B automático
+                html5QrCode.start(
+                    { facingMode: "environment" }, 
+                    {
+                        fps: 10,
+                        qrbox: { width: 250, height: 250 }
+                    },
+                    onScanSuccess,
+                    (errorMessage) => {}
+                ).catch((err2) => {
+                    document.getElementById('status').innerText = "Error al abrir la cámara: " + err2;
+                });
             });
         }
 

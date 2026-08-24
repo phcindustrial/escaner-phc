@@ -10,6 +10,8 @@
         body { font-family: sans-serif; text-align: center; padding: 20px; background-color: #f4f4f9; margin: 0; }
         #reader { width: 100%; max-width: 500px; margin: 0 auto; border-radius: 8px; overflow: hidden; background: #000; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
         #status { margin-top: 20px; font-weight: bold; color: #333; padding: 15px; word-wrap: break-word; font-size: 1.1em; }
+        .success { background-color: #d4edda; color: #155724; border-radius: 5px; }
+        .error { background-color: #f8d7da; color: #721c24; border-radius: 5px; }
     </style>
 </head>
 <body>
@@ -20,31 +22,75 @@
 
     <script>
         // PEGA AQUÍ LA URL DE TU GOOGLE APPS SCRIPT
-        const GOOGLE_SCRIPT_URL = 'https://script.google.com/macros/library/d/1o2mIPFdQiwqo6sHf-y1RIrFXMBKVLjKNOML_RuX1XJ13HKuCi_MkTB4N/2';
+        const GOOGLE_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwRord0rj7LmmwGMA7Q9a19ObGELW4-d-E_WDmx-u4gnKxk2RddDMA8PnwLV_dV3Dnq/exec';
 
-        // Usamos Html5Qrcode puro, sin la interfaz prearmada
         const html5QrCode = new Html5Qrcode("reader");
 
         function onScanSuccess(decodedText, decodedResult) {
-            // Apagamos la cámara apenas lee el QR para que no escanee 2 veces
+            // Frenamos la cámara para procesar
             html5QrCode.stop().then(() => {
-                document.getElementById('status').innerText = "¡QR Detectado!\n\nTexto: " + decodedText;
-                document.getElementById('status').style.color = "blue";
-                
-                // Te da 10 segundos para ver qué texto tiene y vuelve a encender la cámara
-                setTimeout(() => {
-                    iniciarCamara();
-                }, 10000);
+                document.getElementById('status').innerText = "Guardando contacto...";
+                document.getElementById('status').className = "";
+
+                try {
+                    // 1. Desencriptamos el texto en formato Base64
+                    const textoDecodificado = decodeURIComponent(escape(window.atob(decodedText)));
+                    
+                    // 2. Cortamos el texto cada vez que aparece "#|#"
+                    const partes = textoDecodificado.split('#|#');
+                    
+                    // 3. Armamos el paquete de datos para Sheets
+                    // partes[0] es Nombre, partes[1] es Apellido, partes[2] Empresa, partes[5] Teléfono, partes[6] Mail
+                    const data = {
+                        nombre: partes[0] + " " + partes[1],
+                        empresa: partes[2],
+                        telefono: partes[5],
+                        email: partes[6]
+                    };
+
+                    // 4. Lo mandamos a la hoja de cálculo
+                    fetch(GOOGLE_SCRIPT_URL, {
+                        method: 'POST',
+                        body: JSON.stringify(data),
+                        headers: { 'Content-Type': 'text/plain;charset=utf-8' }
+                    })
+                    .then(response => response.json())
+                    .then(result => {
+                        document.getElementById('status').innerText = `¡${data.nombre} guardado con éxito!`;
+                        document.getElementById('status').className = 'success';
+                        
+                        // Espera 2.5 segundos y vuelve a encender la cámara
+                        setTimeout(() => {
+                            document.getElementById('status').className = '';
+                            iniciarCamara();
+                        }, 2500);
+                    })
+                    .catch(err => {
+                        document.getElementById('status').innerText = "Error de conexión al guardar.";
+                        document.getElementById('status').className = 'error';
+                        setTimeout(() => {
+                            document.getElementById('status').className = '';
+                            iniciarCamara();
+                        }, 3000);
+                    });
+
+                } catch (error) {
+                    document.getElementById('status').innerText = 'Error: Este QR no es de la feria.';
+                    document.getElementById('status').className = 'error';
+                    setTimeout(() => {
+                        document.getElementById('status').className = '';
+                        iniciarCamara();
+                    }, 3000);
+                }
+
             }).catch((err) => {
-                console.log("Error al detener", err);
+                console.log("Error al pausar la cámara", err);
             });
         }
 
         function iniciarCamara() {
             document.getElementById('status').innerText = 'Buscando QR...';
-            document.getElementById('status').style.color = "#333";
             
-            // Le forzamos a usar la cámara trasera ("environment")
             html5QrCode.start(
                 { facingMode: "environment" }, 
                 {
@@ -52,15 +98,15 @@
                     qrbox: { width: 250, height: 250 }
                 },
                 onScanSuccess,
-                (errorMessage) => {
-                    // Los errores de lectura cuadro por cuadro se ignoran en silencio
+                (errorMessage) => { 
+                    // Silenciamos los errores de lectura de cuadros vacíos
                 }
             ).catch((err) => {
                 document.getElementById('status').innerText = "Error al abrir la cámara: " + err;
             });
         }
 
-        // Ejecutamos la función apenas se abre la página
+        // Arrancamos todo
         iniciarCamara();
     </script>
 

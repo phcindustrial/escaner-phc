@@ -7,55 +7,61 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html5-qrcode/2.3.8/html5-qrcode.min.js"></script>
     <link rel="manifest" href="manifest.json">
     <style>
-        body { font-family: sans-serif; text-align: center; padding: 20px; background-color: #f4f4f9; }
-        #reader { width: 100%; max-width: 500px; margin: 0 auto; border-radius: 8px; overflow: hidden; background: #fff; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
-        /* Agregué word-wrap para que el texto largo del QR no se corte */
-        #status { margin-top: 20px; font-weight: bold; color: #333; padding: 10px; word-wrap: break-word; } 
-        .success { background-color: #d4edda; color: #155724; border-radius: 5px; }
+        body { font-family: sans-serif; text-align: center; padding: 20px; background-color: #f4f4f9; margin: 0; }
+        #reader { width: 100%; max-width: 500px; margin: 0 auto; border-radius: 8px; overflow: hidden; background: #000; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
+        #status { margin-top: 20px; font-weight: bold; color: #333; padding: 15px; word-wrap: break-word; font-size: 1.1em; }
     </style>
 </head>
 <body>
 
     <h2>Escáner de Contactos</h2>
-    <div id="reader">Cargando cámara...</div>
-    <div id="status">Esperando escanear...</div>
+    <div id="reader"></div>
+    <div id="status">Iniciando cámara trasera...</div>
 
     <script>
         // PEGA AQUÍ LA URL DE TU GOOGLE APPS SCRIPT
-        const GOOGLE_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwRord0rj7LmmwGMA7Q9a19ObGELW4-d-E_WDmx-u4gnKxk2RddDMA8PnwLV_dV3Dnq/exec';
+        const GOOGLE_SCRIPT_URL = 'https://script.google.com/macros/library/d/1o2mIPFdQiwqo6sHf-y1RIrFXMBKVLjKNOML_RuX1XJ13HKuCi_MkTB4N/2';
+
+        // Usamos Html5Qrcode puro, sin la interfaz prearmada
+        const html5QrCode = new Html5Qrcode("reader");
 
         function onScanSuccess(decodedText, decodedResult) {
-            // Detenemos el escáner momentáneamente
-            html5QrcodeScanner.pause();
-            
-            // Mostramos en pantalla el texto crudo del QR
-            document.getElementById('status').innerText = "Texto del QR: \n" + decodedText;
-            document.getElementById('status').style.color = "blue";
-            
-            // Te da 10 segundos para leerlo/sacar captura y vuelve a escanear
-            setTimeout(() => {
-                document.getElementById('status').innerText = 'Esperando escanear...';
-                document.getElementById('status').style.color = "#333";
-                html5QrcodeScanner.resume();
-            }, 10000);
+            // Apagamos la cámara apenas lee el QR para que no escanee 2 veces
+            html5QrCode.stop().then(() => {
+                document.getElementById('status').innerText = "¡QR Detectado!\n\nTexto: " + decodedText;
+                document.getElementById('status').style.color = "blue";
+                
+                // Te da 10 segundos para ver qué texto tiene y vuelve a encender la cámara
+                setTimeout(() => {
+                    iniciarCamara();
+                }, 10000);
+            }).catch((err) => {
+                console.log("Error al detener", err);
+            });
         }
 
-        function onScanFailure(error) {
-            // Ignoramos los fallos de lectura para no saturar la pantalla
+        function iniciarCamara() {
+            document.getElementById('status').innerText = 'Buscando QR...';
+            document.getElementById('status').style.color = "#333";
+            
+            // Le forzamos a usar la cámara trasera ("environment")
+            html5QrCode.start(
+                { facingMode: "environment" }, 
+                {
+                    fps: 10,
+                    qrbox: { width: 250, height: 250 }
+                },
+                onScanSuccess,
+                (errorMessage) => {
+                    // Los errores de lectura cuadro por cuadro se ignoran en silencio
+                }
+            ).catch((err) => {
+                document.getElementById('status').innerText = "Error al abrir la cámara: " + err;
+            });
         }
 
-        // Envolvemos el inicio de la cámara en un bloque de prueba para atrapar errores
-        try {
-            let html5QrcodeScanner = new Html5QrcodeScanner(
-                "reader",
-                { fps: 10, qrbox: {width: 250, height: 250} },
-                false
-            );
-            html5QrcodeScanner.render(onScanSuccess, onScanFailure);
-        } catch (error) {
-            alert("Error al intentar iniciar la cámara: " + error.message);
-            document.getElementById('reader').innerText = "La cámara no pudo iniciar.";
-        }
+        // Ejecutamos la función apenas se abre la página
+        iniciarCamara();
     </script>
 
 </body>

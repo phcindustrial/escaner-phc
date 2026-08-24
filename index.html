@@ -36,12 +36,12 @@
                     const textoDecodificado = decodeURIComponent(escape(window.atob(decodedText)));
                     const partes = textoDecodificado.split('#|#');
                     
-                    // Ahora sí, capturamos la posición 3 para el teléfono y la 4 para el email
+                    // Posición 5 para teléfono (con la comilla para que no se borre el +) y 6 para email
                     const data = {
                         nombre: partes[0] + " " + partes[1],
                         empresa: partes[2],
-                        telefono: "'" + partes[3], 
-                        email: partes[4]
+                        telefono: "'" + partes[5], 
+                        email: partes[6]
                     };
 
                     fetch(GOOGLE_SCRIPT_URL, {
@@ -85,7 +85,7 @@
         function iniciarCamara() {
             document.getElementById('status').innerText = 'Buscando QR...';
             
-            // Usamos 'exact' para obligar a iOS a usar la cámara trasera
+            // Forzamos la cámara trasera
             html5QrCode.start(
                 { facingMode: { exact: "environment" } }, 
                 {
@@ -95,7 +95,7 @@
                 onScanSuccess,
                 (errorMessage) => {}
             ).catch((err) => {
-                // Si falla el modo exacto (pasa en algunos Android), entra este plan B automático
+                // Plan B automático si falla el modo estricto
                 html5QrCode.start(
                     { facingMode: "environment" }, 
                     {

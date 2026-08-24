@@ -36,12 +36,15 @@
                     const textoDecodificado = decodeURIComponent(escape(window.atob(decodedText)));
                     const partes = textoDecodificado.split('#|#');
                     
-                    // Posición 5 para teléfono (con la comilla para que no se borre el +) y 6 para email
+                    // Limpiamos el teléfono quitándole el símbolo "+" si lo tiene
+                    let telefonoLimpio = partes[4] ? partes[4].replace('+', '') : '';
+                    
+                    // Armamos los datos apuntando a las posiciones correctas (4 y 5)
                     const data = {
                         nombre: partes[0] + " " + partes[1],
                         empresa: partes[2],
-                        telefono: "'" + partes[5], 
-                        email: partes[6]
+                        telefono: telefonoLimpio, 
+                        email: partes[5]
                     };
 
                     fetch(GOOGLE_SCRIPT_URL, {
@@ -85,7 +88,7 @@
         function iniciarCamara() {
             document.getElementById('status').innerText = 'Buscando QR...';
             
-            // Forzamos la cámara trasera
+            // Forzamos la cámara trasera de nuevo
             html5QrCode.start(
                 { facingMode: { exact: "environment" } }, 
                 {
@@ -95,7 +98,7 @@
                 onScanSuccess,
                 (errorMessage) => {}
             ).catch((err) => {
-                // Plan B automático si falla el modo estricto
+                // Plan B si el modo estricto falla
                 html5QrCode.start(
                     { facingMode: "environment" }, 
                     {

@@ -28,18 +28,15 @@
 
         function onScanSuccess(decodedText, decodedResult) {
             html5QrCode.stop().then(() => {
-                document.getElementById('status').innerText = "Guardando contacto...";
-                document.getElementById('status').className = "";
-
                 try {
                     // Desencriptamos el texto
                     const textoDecodificado = decodeURIComponent(escape(window.atob(decodedText)));
                     const partes = textoDecodificado.split('#|#');
                     
-                    // Limpiamos el teléfono quitándole el símbolo "+" si lo tiene
+                    // Limpiamos el teléfono quitándole el símbolo "+" si lo tiene (Posición 4)
                     let telefonoLimpio = partes[4] ? partes[4].replace('+', '') : '';
                     
-                    // Armamos los datos apuntando a las posiciones correctas (4 y 5)
+                    // Armamos los datos (Posición 5 para email)
                     const data = {
                         nombre: partes[0] + " " + partes[1],
                         empresa: partes[2],
@@ -47,37 +44,34 @@
                         email: partes[5]
                     };
 
+                    // 1. Damos el aviso de éxito INMEDIATAMENTE en pantalla
+                    document.getElementById('status').innerText = `¡Capturado: ${data.nombre}!`;
+                    document.getElementById('status').className = 'success';
+
+                    // 2. Reanudamos la cámara súper rápido (1.5 segundos) para seguir escaneando
+                    setTimeout(() => {
+                        document.getElementById('status').className = '';
+                        iniciarCamara();
+                    }, 1500);
+
+                    // 3. Enviamos a Google de fondo SIN ESPERAR respuesta (mode: 'no-cors')
+                    // Esto evita que la app se trabe o tire error si el internet de la feria está lento
                     fetch(GOOGLE_SCRIPT_URL, {
                         method: 'POST',
+                        mode: 'no-cors', 
                         body: JSON.stringify(data),
                         headers: { 'Content-Type': 'text/plain;charset=utf-8' }
-                    })
-                    .then(response => response.json())
-                    .then(result => {
-                        document.getElementById('status').innerText = `¡${data.nombre} guardado con éxito!`;
-                        document.getElementById('status').className = 'success';
-                        
-                        setTimeout(() => {
-                            document.getElementById('status').className = '';
-                            iniciarCamara();
-                        }, 2500);
-                    })
-                    .catch(err => {
-                        document.getElementById('status').innerText = "Error de conexión al guardar.";
-                        document.getElementById('status').className = 'error';
-                        setTimeout(() => {
-                            document.getElementById('status').className = '';
-                            iniciarCamara();
-                        }, 3000);
+                    }).catch(err => {
+                        console.log("Error de red silencioso", err);
                     });
 
                 } catch (error) {
-                    document.getElementById('status').innerText = 'Error: Este QR no es de la feria.';
+                    document.getElementById('status').innerText = 'Error: QR no válido.';
                     document.getElementById('status').className = 'error';
                     setTimeout(() => {
                         document.getElementById('status').className = '';
                         iniciarCamara();
-                    }, 3000);
+                    }, 2000);
                 }
 
             }).catch((err) => {
@@ -88,7 +82,7 @@
         function iniciarCamara() {
             document.getElementById('status').innerText = 'Buscando QR...';
             
-            // Forzamos la cámara trasera de nuevo
+            // Forzamos la cámara trasera
             html5QrCode.start(
                 { facingMode: { exact: "environment" } }, 
                 {

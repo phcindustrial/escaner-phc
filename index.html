@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>PHC Escáner - Feria</title>
+    <title>PHC Industrial Escáner - Feria</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html5-qrcode/2.3.8/html5-qrcode.min.js"></script>
     <link rel="manifest" href="manifest.json">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
@@ -24,16 +24,29 @@
             color: var(--phc-dark);
         }
 
-        /* Encabezado Corporativo */
+        /* Encabezado Corporativo Blanco para el Logo Oscuro */
         .header {
-            background-color: var(--phc-dark);
-            color: var(--phc-white);
+            background-color: var(--phc-white);
             padding: 15px 20px;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.08);
             margin-bottom: 25px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
         }
-        .header h1 { margin: 0; font-size: 1.4em; font-weight: 800; letter-spacing: 1px;}
-        .header p { margin: 5px 0 0 0; font-size: 0.85em; color: #b3b3b3; }
+        .header img.logo { 
+            max-height: 75px; 
+            width: auto;
+            margin-bottom: 5px;
+        }
+        .header p { 
+            margin: 5px 0 0 0; 
+            font-size: 0.85em; 
+            color: var(--phc-mid); 
+            font-weight: 600; 
+            text-transform: uppercase; 
+            letter-spacing: 1px;
+        }
 
         /* Contenedor Principal */
         .card {
@@ -128,19 +141,18 @@
 </head>
 <body>
 
+    <!-- Encabezado con tu nuevo logo -->
     <div class="header">
-        <h1>PHC COMPONENTES</h1>
+        <img src="PHC%20LOGO_2026.png" alt="PHC Industrial" class="logo">
         <p>Registro de Contactos - Feria</p>
     </div>
     
     <div class="card">
-        <!-- Contenedor de la Cámara -->
         <div id="reader-container">
             <div id="reader"></div>
             <button id="btn-cambiar-camara" onclick="cambiarCamara()">🔄 Cambiar Lente</button>
         </div>
         
-        <!-- Contenedor del Formulario (Oculto al inicio) -->
         <div id="formulario-producto">
             <div id="nombre-capturado"></div>
             <div class="empresa-capturada" id="empresa-capturada"></div>
@@ -158,12 +170,11 @@
 
     <script>
         // PEGA AQUÍ LA URL DE TU GOOGLE APPS SCRIPT
-        const GOOGLE_SCRIPT_URL = 'TU_URL_DE_APPS_SCRIPT_AQUI';
+        const GOOGLE_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwyG6ue0MJ5--uFhrw9Fr0D0w6yAG7OJf29WcDoeJqAukACg3y5OmlCPJ7jbcY_iqGZ/exec';
 
         const html5QrCode = new Html5Qrcode("reader");
         let contactoActual = {}; 
         
-        // Variables para el manejo de múltiples cámaras en Android
         let camarasTraseras = [];
         let indiceCamaraActual = 0;
 
@@ -183,7 +194,6 @@
                         producto: ""
                     };
 
-                    // Ocultamos cámara y mostramos formulario
                     document.getElementById('reader-container').style.display = 'none';
                     document.getElementById('formulario-producto').style.display = 'block';
                     
@@ -237,14 +247,12 @@
             Html5Qrcode.getCameras().then(devices => {
                 if (devices && devices.length) {
                     camarasTraseras = [];
-                    // Filtramos las cámaras que digan "back" o "trasera"
                     for (let i = 0; i < devices.length; i++) {
                         if (devices[i].label.toLowerCase().includes("back") || devices[i].label.toLowerCase().includes("trasera") || devices[i].label.toLowerCase().includes("0")) {
                             camarasTraseras.push(devices[i].id);
                         }
                     }
                     
-                    // Si encontramos más de una cámara trasera, mostramos el botón para alternar
                     if (camarasTraseras.length > 1) {
                         document.getElementById('btn-cambiar-camara').style.display = 'block';
                     }
@@ -257,12 +265,10 @@
         }
 
         function cambiarCamara() {
-            // Pasamos a la siguiente cámara de la lista
             indiceCamaraActual++;
             if (indiceCamaraActual >= camarasTraseras.length) {
                 indiceCamaraActual = 0;
             }
-            // Apagamos y volvemos a prender con la nueva lente
             html5QrCode.stop().then(() => {
                 iniciarCamara();
             }).catch(err => console.log(err));
@@ -300,7 +306,6 @@
             });
         }
 
-        // Arrancamos buscando las cámaras disponibles
         buscarCamaras();
     </script>
 
